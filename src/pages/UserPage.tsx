@@ -8,7 +8,7 @@ import { Unlock } from "lucide-react";
 import { useAuth } from "../Context/AuthContext";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3000/api/packages";
+const API_BASE = "";
 
 interface PackageType {
   id: string;
