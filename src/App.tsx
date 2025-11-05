@@ -38,9 +38,7 @@ const App = () => (
             <Route
               path="/delivery"
               element={
-                <ProtectedRoute>
                   <DeliveryPage />
-                </ProtectedRoute>
               }
             />
 
