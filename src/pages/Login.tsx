@@ -1,82 +1,78 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { auth } from "../firebaseClient";
+import React, { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+const API_BASE = "http://localhost:3000/api/auth"; // adjust if needed
 
 const Login = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) navigate("/"); 
-    });
-    return () => unsubscribe();
-  }, [navigate]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, form.email, form.password);
-      alert("Login successful!");
-      navigate("/");
-    } catch (error: any) {
-      alert(error.message || "Login failed");
+      const res = await axios.post(`${API_BASE}/login`, { email, password });
+
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        toast({ title: "Login Successful 🎉" });
+        navigate("/");
+      } else {
+        toast({ title: "Invalid Credentials", variant: "destructive" });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Login Failed ❌",
+        description: err.response?.data?.message || "Server error",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#1FC7D4] to-[#0a2540]">
-      <motion.form
-        onSubmit={handleSubmit}
-        initial={{ opacity: 0, y: 30, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl w-96 space-y-6 border border-white/20"
-      >
-        <h1 className="text-3xl font-bold text-white text-center">Welcome Back 👋</h1>
-        <input
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          className="w-full border border-white/20 bg-white/10 text-white placeholder-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1FC7D4] transition"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Enter your password"
-          value={form.password}
-          onChange={handleChange}
-          required
-          className="w-full border border-white/20 bg-white/10 text-white placeholder-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1FC7D4] transition"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[#1FC7D4] text-white p-3 rounded-lg font-semibold hover:bg-[#17a8b4] transition-all shadow-md"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-        <p className="text-sm text-gray-200 text-center">
-          Don’t have an account?{" "}
-          <Link to="/signup" className="text-[#1FC7D4] hover:underline font-medium">
-            Signup here
-          </Link>
-        </p>
-      </motion.form>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md shadow-md">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-bold">Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+            />
+            <Input
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+            />
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Login"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

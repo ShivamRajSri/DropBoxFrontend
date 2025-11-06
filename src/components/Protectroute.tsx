@@ -1,23 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebaseClient";
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+interface ProtectedRouteProps {
+  children: JSX.Element;
+}
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const token = localStorage.getItem("token");
 
-  if (loading) return <div className="text-center mt-10">Loading...</div>;
+  // If user is not logged in, redirect to login
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
-  return user ? children : <Navigate to="/login" replace />;
+  // If token exists, allow access
+  return children;
 };
 
 export default ProtectedRoute;

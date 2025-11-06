@@ -1,78 +1,75 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { QrCode, Send } from "lucide-react";
+import { Send, CheckCircle } from "lucide-react";
 import axios from "axios";
-import QrScanner from "react-qr-scanner";
 
 const API_BASE = "http://localhost:3000/api/packages";
 
 const DeliveryPage = () => {
   const { toast } = useToast();
-  const [qrScanned, setQrScanned] = useState<string | null>(null);
+  const [packages, setPackages] = useState<any[]>([]);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [description, setDescription] = useState("");
-  const [userId, setUserId] = useState("");
-  const [showScanner, setShowScanner] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // 🔹 Handle QR code scan
-  const handleScan = (data: any) => {
-    if (data) {
-      setQrScanned(data.text || data);
-      setShowScanner(false);
-      toast({
-        title: "QR Code Scanned ✅",
-        description: `Box ID: ${data.text || data}`,
-      });
+  // 🔹 Fetch all packages for demo user
+  const fetchPackages = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/demoUser123`);
+      const data = await res.json();
+      setPackages(data);
+    } catch (err) {
+      console.error("Error fetching packages:", err);
     }
   };
 
-  // 🔹 Handle QR error
-  const handleError = (err: any) => {
-    console.error("QR Error:", err);
-    toast({
-      title: "Camera Error ❌",
-      description: "Unable to access camera or QR code not detected.",
-      variant: "destructive",
-    });
-  };
+  useEffect(() => {
+    fetchPackages();
+  }, []);
 
-  // 🔹 Send package request to user
-  const handleSubmit = async () => {
-    if (!userId || !trackingNumber || !qrScanned) {
-      toast({
-        title: "Missing Fields ❗",
-        description: "Please fill all fields and scan the QR first.",
-        variant: "destructive",
-      });
+  // 🔹 Create a new package
+  const handleCreate = async () => {
+    if (!trackingNumber) {
+      toast({ title: "Missing Tracking Number ❗", variant: "destructive" });
       return;
     }
 
+    setLoading(true);
     try {
-      await axios.post(`${API_BASE}`, {
-        userId,
-        boxId: qrScanned,
-        trackingNumber,
-        description,
-      });
-
-      toast({
-        title: "Delivery Request Sent 🚚",
-        description: "User has been notified to unlock the box.",
-      });
-
+      await axios.post(`${API_BASE}`, { trackingNumber, description });
+      toast({ title: "Package Created 📦" });
       setTrackingNumber("");
       setDescription("");
-      setQrScanned(null);
+      await fetchPackages(); // <-- refresh the list immediately
     } catch (error) {
-      console.error("Error sending request:", error);
-      toast({
-        title: "Request Failed ❌",
-        description: "Could not send delivery request.",
-        variant: "destructive",
-      });
+      toast({ title: "Error ❌", description: "Could not create package", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Request unlock
+  const handleRequestUnlock = async (id: string) => {
+    try {
+      await axios.put(`${API_BASE}/${id}/request-unlock`);
+      toast({ title: "Unlock Requested 🔓", description: "User has been notified." });
+      await fetchPackages();
+    } catch {
+      toast({ title: "Error ❌", description: "Could not request unlock", variant: "destructive" });
+    }
+  };
+
+  // 🔹 Mark as delivered
+  const handleMarkDelivered = async (id: string) => {
+    try {
+      await axios.put(`${API_BASE}/${id}/mark-delivered`);
+      toast({ title: "Package Delivered ✅" });
+      await fetchPackages();
+    } catch {
+      toast({ title: "Error ❌", description: "Could not mark as delivered", variant: "destructive" });
     }
   };
 
@@ -80,73 +77,64 @@ const DeliveryPage = () => {
     <div className="min-h-screen bg-background p-8">
       <h1 className="text-3xl font-bold text-center mb-6">🚚 Delivery Portal</h1>
 
-      <Card className="max-w-md mx-auto shadow-lg rounded-2xl">
+      {/* Create new package */}
+      <Card className="max-w-md mx-auto mb-8">
         <CardHeader>
-          <CardTitle>Scan Box & Send Request</CardTitle>
+          <CardTitle>Create New Package</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-
-          {/* QR Scanner */}
-          {showScanner ? (
-            <div className="flex flex-col items-center">
-              <QrScanner
-                delay={300}
-                onError={handleError}
-                onScan={handleScan}
-                style={{ width: "100%", borderRadius: "12px" }}
-              />
-              <Button
-                variant="secondary"
-                className="mt-3"
-                onClick={() => setShowScanner(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={() => setShowScanner(true)}
-              className="w-full flex justify-center items-center"
-            >
-              <QrCode className="w-4 h-4 mr-2" /> Scan QR Code
-            </Button>
-          )}
-
-          {/* Show scanned box */}
-          {qrScanned && (
-            <p className="text-sm text-center text-muted-foreground">
-              ✅ Scanned Box ID: <span className="font-semibold">{qrScanned}</span>
-            </p>
-          )}
-
-          {/* Inputs */}
-          <Input
-            placeholder="User ID (for demo, use test user ID)"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          />
-
           <Input
             placeholder="Tracking Number"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
           />
-
           <Input
-            placeholder="Description"
+            placeholder="Description (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-
-          {/* Submit */}
           <Button
-            onClick={handleSubmit}
-            className="w-full flex justify-center items-center"
+            onClick={handleCreate}
+            className="w-full"
+            disabled={loading}
           >
-            <Send className="w-4 h-4 mr-2" /> Send Delivery Request
+            {loading ? "Creating..." : <><Send className="w-4 h-4 mr-2" /> Create Package</>}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Existing packages */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {packages.length === 0 ? (
+          <p className="text-center text-gray-500 col-span-full">No packages yet.</p>
+        ) : (
+          packages.map((pkg) => (
+            <Card key={pkg.id} className="shadow-md">
+              <CardHeader>
+                <CardTitle>{pkg.trackingNumber}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>{pkg.description}</p>
+                <p className="mt-1 text-sm">
+                  Status: <b>{pkg.status}</b>
+                </p>
+
+                <div className="flex gap-2 mt-3">
+                  <Button onClick={() => handleRequestUnlock(pkg.id)}>
+                    Request Unlock
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleMarkDelivered(pkg.id)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" /> Delivered
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 };
