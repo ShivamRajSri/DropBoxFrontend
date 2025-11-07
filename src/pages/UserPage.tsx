@@ -14,7 +14,7 @@ const UserPage = () => {
   const [packages, setPackages] = useState<any[]>([]);
 
   // Hardcoded demo user ID (same as backend)
-  const userId = "demoUser123";
+  const userId = "demouser123";
 
   // 🔹 Real-time listener for user packages
   useEffect(() => {

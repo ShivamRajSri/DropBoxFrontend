@@ -18,7 +18,7 @@ const DeliveryPage = () => {
   // 🔹 Fetch all packages for demo user
   const fetchPackages = async () => {
     try {
-      const res = await fetch(`${API_BASE}/demoUser123`);
+      const res = await fetch(`${API_BASE}/demouser123`);
       const data = await res.json();
       setPackages(data);
     } catch (err) {
