@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:3000/api/auth"; // adjust if needed
+const API_BASE = "http://localhost:3000/api/auth";
 
 const Login = () => {
   const { toast } = useToast();
